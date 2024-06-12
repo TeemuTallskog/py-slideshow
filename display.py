@@ -11,6 +11,7 @@ class Display:
         parser.add_argument('-path', type=str, required=True, nargs='+', help="Path/paths to a folder containing images ex. ( -path <path/to/folder/> <c:/path/to/folder/> ... )")
         parser.add_argument('-speed', type=float, help="Speed in seconds at which a new image gets added to display (e.g. -speed 2 or -speed 0.5 )", default=2)
         parser.add_argument('-fill', action='store_true', help="Ignore image aspect ratio and strech fill squares.")
+        parser.add_argument('-background', '--background-color', type=self.validate_rgb, help="Choose backgroud color with an rgb string RED,GREEN,BLUE (e.g., 255,255,255)", default="0,0,0")
         args = parser.parse_args()
         self.speed = args.speed
         self.image_paths = [img_path for dir_path in args.path for img_path in self.get_image_paths(dir_path)]
@@ -22,7 +23,22 @@ class Display:
         print(self.squares)
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height), pygame.FULLSCREEN)
         pygame.display.set_caption("Slideshow")
-        self.backgroud_color = (0,0,0)
+        self.backgroud_color = args.background_color
+
+    def validate_rgb(self, rgb_string):
+        parts = rgb_string.split(',')
+
+        if len(parts) != 3:
+            raise argparse.ArgumentTypeError(f"Invalid rbg format, please input 3 positive integers separated by commas (e.g., 128,70,128)")
+
+        try:
+            r, g, b = map(int, parts)
+            if 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255:
+                return (r,g,b)
+            else:
+                raise argparse.ArgumentTypeError(f"Invalid rbg format, please input 3 positive integers separated by commas (e.g., 128,70,128)")
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"Invalid rbg format, please input 3 positive integers separated by commas (e.g., 128,70,128)")
 
     def validate_xy_string(self, xy_string):
         parts = xy_string.split('x')
