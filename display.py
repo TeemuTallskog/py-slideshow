@@ -7,20 +7,25 @@ import argparse
 class Display:
     def __init__(self):
         parser = argparse.ArgumentParser(description='Divide resolution into squares based on xy string.')
-        parser.add_argument('-squares', type=self.validate_xy_string, help='XY string in the format "X_axisxY_axis" (e.g., "3x2").', default='2x2')
+        parser.add_argument('-grid', type=self.validate_xy_string, help='XY string in the format "X_axisxY_axis" (e.g., "3x2").', default='2x2')
         parser.add_argument('-path', type=str, required=True, nargs='+', help="Path/paths to a folder containing images ex. ( -path <path/to/folder/> <c:/path/to/folder/> ... )")
         parser.add_argument('-speed', type=float, help="Speed in seconds at which a new image gets added to display (e.g. -speed 2 or -speed 0.5 )", default=2)
         parser.add_argument('-fill', action='store_true', help="Ignore image aspect ratio and strech fill squares.")
-        parser.add_argument('-background', '--background-color', type=self.validate_rgb, help="Choose backgroud color with an rgb string RED,GREEN,BLUE (e.g., 255,255,255)", default="0,0,0")
+        parser.add_argument('-background', '--background-color', type=self.validate_rgb, help="Choose backgroud color with an rgb string RED,GREEN,BLUE (e.g., 255,255,255 #White 0,0,0 #Black)", default="0,0,0")
+        parser.add_argument('-border', nargs='?', type=self.validate_rgb, const=(255,255,255), help="Draw images with a border, optinally pass rgb value (e.g. -border | -border 0,0,0 )")
+        parser.add_argument('-border-width', type=int, help="Set border width, positive integer.", default=5)
+        parser.add_argument('-gap', type=int, help="Pixels. Set a pixel gap between images", default=0)
         args = parser.parse_args()
         self.speed = args.speed
         self.image_paths = [img_path for dir_path in args.path for img_path in self.get_image_paths(dir_path)]
+        self.border = args.border
+        self.border_width = args.border_width
+        self.gap = args.gap
 
         pygame.init()
         self.fill = args.fill
         self.screen_width, self.screen_height = pygame.display.Info().current_w, pygame.display.Info().current_h
-        self.squares = self.divide_resolution((self.screen_width, self.screen_height), args.squares)
-        print(self.squares)
+        self.squares = self.divide_resolution((self.screen_width, self.screen_height), args.grid)
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height), pygame.FULLSCREEN)
         pygame.display.set_caption("Slideshow")
         self.backgroud_color = args.background_color
@@ -61,21 +66,21 @@ class Display:
             image_paths.extend(glob.glob(os.path.join(dir_path, extension)))
 
         return image_paths
-    
+
     def divide_resolution(self, resolution, xy_string):
         x_axis, y_axis = map(int, xy_string.split('x'))
         width, height = resolution
 
-        x_size = width // x_axis
-        y_size = height // y_axis
+        x_size = (width - (x_axis - 1) * self.gap) // x_axis
+        y_size = (height - (y_axis - 1) * self.gap) // y_axis
 
         squares = []
         for i in range(x_axis):
             for j in range(y_axis):
-                left = i * x_size
-                right = (i + 1) * x_size if i != x_axis - 1 else width
-                top = j * y_size
-                bottom = (j + 1) * y_size if j != y_axis - 1 else height
+                left = i * x_size + i * self.gap
+                right = (i + 1) * x_size + i * self.gap if i != x_axis - 1 else width
+                top = j * y_size + j * self.gap
+                bottom = (j + 1) * y_size + j * self.gap if j != y_axis - 1 else height
                 squares.append((left, top, right, bottom))
 
         return squares
@@ -87,22 +92,36 @@ class Display:
         square_height = abs(square[1] - square[3])
 
         if self.fill:
-            return pygame.transform.scale(image, (square_width, square_height))
-
-        if (square_width / square_height) > aspect_ratio:
-            new_width = int(square_height * aspect_ratio)
-            scaled = pygame.transform.scale(image, (new_width, square_height))
+            if not self.border:
+                return pygame.transform.scale(image, (square_width, square_height))
+            scaled = pygame.transform.scale(image, ((square_width - self.border_width * 2), (square_height - self.border_width * 2)))
+        elif (square_width / square_height) > aspect_ratio:
+            if self.border:
+                new_width = int((square_height - self.border_width * 2) * aspect_ratio)
+                scaled = pygame.transform.scale(image, (new_width, (square_height - self.border_width * 2)))
+            else:
+                new_width = int(square_height * aspect_ratio)
+                scaled = pygame.transform.scale(image, (new_width, square_height))
         elif (square_width / square_height) < aspect_ratio:
-            new_heigth = int(square_width / aspect_ratio)
-            scaled = pygame.transform.scale(image, (square_width, new_heigth))
+            if self.border:
+                new_heigth = int((square_width - self.border_width * 2) / aspect_ratio)
+                scaled = pygame.transform.scale(image, ((square_width - self.border_width * 2), new_heigth))
+            else:
+                new_heigth = int(square_width / aspect_ratio)
+                scaled = pygame.transform.scale(image, (square_width, new_heigth))
         else:
-            scaled = pygame.transform.scale(image, (square_width, square_height))
+            if self.border:
+                scaled = pygame.transform.scale(image, ((square_width - self.border_width * 2), (square_height - self.border_width * 2)))
+            else:
+                scaled = pygame.transform.scale(image, (square_width, square_height))
 
         offset_x = (square_width - scaled.get_width()) // 2
         offset_y = (square_height - scaled.get_height()) // 2
 
         surface = pygame.Surface((square_width, square_height))
         surface.fill(self.backgroud_color)
+        if self.border:
+            pygame.draw.rect(surface, self.border, (offset_x - self.border_width, offset_y - self.border_width, (scaled.get_width() + self.border_width * 2), (scaled.get_height() + self.border_width * 2)))
         surface.blit(scaled, (offset_x, offset_y))
         return surface
 
