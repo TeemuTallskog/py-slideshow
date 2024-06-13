@@ -3,6 +3,7 @@ import sys
 import glob
 import os
 import argparse
+from PIL import Image, ExifTags
 
 class Display:
     def __init__(self):
@@ -124,6 +125,28 @@ class Display:
             pygame.draw.rect(surface, self.border, (offset_x - self.border_width, offset_y - self.border_width, (scaled.get_width() + self.border_width * 2), (scaled.get_height() + self.border_width * 2)))
         surface.blit(scaled, (offset_x, offset_y))
         return surface
+    
+    def process_image(self, image_path):
+        image = Image.open(image_path)
+
+        try:
+            exif = image._getexif()
+            if exif is not None:
+                for orientation in ExifTags.TAGS.keys():
+                    if ExifTags.TAGS[orientation] == 'Orientation':
+                        break
+
+                if orientation in exif:
+                    if exif[orientation] == 3:
+                        image = image.rotate(180, expand=True)
+                    elif exif[orientation] == 6:
+                        image = image.rotate(270, expand=True)
+                    elif exif[orientation] == 8:
+                        image = image.rotate(90, expand=True)
+        except AttributeError:
+            pass
+        
+        return pygame.image.fromstring(image.tobytes(), image.size, image.mode)
 
 
     def main(self):
@@ -137,7 +160,7 @@ class Display:
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     running = False
             try:
-                image = self.resize_with_pad(pygame.image.load(self.image_paths[image_index]), self.squares[square_index])
+                image = self.resize_with_pad(self.process_image(self.image_paths[image_index]), self.squares[square_index])
                 self.screen.blit(image, self.squares[square_index])
                 if square_index < (len(self.squares) - 1):
                     square_index += 1
