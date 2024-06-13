@@ -2,7 +2,7 @@
 Full screen slide show of images written in python!
 ## Install
 ```bash
-pip install pygame
+pip install pygame pillow
 git clone https://https://github.com/TeemuTallskog/py-slideshow.git
 cd py-slideshow
 python3 display.py
@@ -31,6 +31,8 @@ python3 display.py
     - Set border width, positive integer. ``-border`` must be set in order for this to have an effect.
   - ``-gap GAP``              
     - Pixels. Set a pixel gap between images
+  - ``-shuffle``
+    - Display images in random order.
 
 To exit slide show you can press and hold the **ESCAPE** key
 ### Example:

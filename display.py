@@ -4,6 +4,7 @@ import glob
 import os
 import argparse
 from PIL import Image, ExifTags
+from random import shuffle
 
 class Display:
     def __init__(self):
@@ -16,9 +17,12 @@ class Display:
         parser.add_argument('-border', nargs='?', type=self.validate_rgb, const=(255,255,255), help="Draw images with a border, optinally pass rgb value (e.g. -border | -border 0,0,0 )")
         parser.add_argument('-border-width', type=int, help="Set border width, positive integer.", default=5)
         parser.add_argument('-gap', type=int, help="Pixels. Set a pixel gap between images", default=0)
+        parser.add_argument('-shuffle', action="store_true", help="Display images in random order.")
         args = parser.parse_args()
         self.speed = args.speed
         self.image_paths = [img_path for dir_path in args.path for img_path in self.get_image_paths(dir_path)]
+        if args.shuffle:
+            shuffle(self.image_paths)
         self.border = args.border
         self.border_width = args.border_width
         self.gap = args.gap
